@@ -22,7 +22,9 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#ifdef SIMON_TEST_HW
+#include "test.h"
+#endif
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -94,6 +96,10 @@ int main(void)
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
 
+#ifdef SIMON_TEST_HW
+  test_initTestHW();
+  test_computeTestHW();
+#endif
   /* USER CODE END 2 */
 
   /* Infinite loop */
