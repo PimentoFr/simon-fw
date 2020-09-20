@@ -19,8 +19,8 @@ typedef enum {
 } ledColor_t;
 
 
-void led_enable(ledColor_t ledColor);
-void led_disable(ledColor_t ledColor);
-
+void led_setEnable(ledColor_t ledColor, GPIO_PinState newState);
+#define led_enable(ledColor) led_setEnable(ledColor, GPIO_PIN_SET)
+#define led_disable(ledColor) led_setEnable(ledColor, GPIO_PIN_RESET)
 
 #endif /* INC_LED_H_ */
