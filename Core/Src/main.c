@@ -57,7 +57,9 @@ static void MX_GPIO_Init(void);
 static void MX_ADC_Init(void);
 static void MX_TIM2_Init(void);
 /* USER CODE BEGIN PFP */
-
+#ifndef DEBUG
+static void GPIO_ReleaseMode_Init(void);
+#endif
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -96,6 +98,10 @@ int main(void)
   MX_ADC_Init();
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
+#ifndef DEBUG
+  /* Initialize only on release mode */
+  GPIO_ReleaseMode_Init();
+#endif
 
 #ifdef SIMON_TEST_HW
   test_initTestHW();
@@ -272,8 +278,7 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOA, MEASURE_EN_Pin|DIGIT_3_Pin|DIGIT_2_Pin|DIGIT_1_Pin
                           |DIGIT_A_Pin|DIGIT_B_Pin|DIGIT_C_Pin|DIGIT_D_Pin
-                          |DIGIT_E_Pin|DIGIT_F_Pin|LED_RED_Pin|DIGIT_G_Pin
-                          |LED_YELLOW_Pin, GPIO_PIN_RESET);
+                          |DIGIT_E_Pin|DIGIT_F_Pin|LED_RED_Pin|LED_YELLOW_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, LED_BLUE_Pin|LED_GREEN_Pin, GPIO_PIN_RESET);
@@ -286,12 +291,10 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pins : MEASURE_EN_Pin DIGIT_3_Pin DIGIT_2_Pin DIGIT_1_Pin
                            DIGIT_A_Pin DIGIT_B_Pin DIGIT_C_Pin DIGIT_D_Pin
-                           DIGIT_E_Pin DIGIT_F_Pin LED_RED_Pin DIGIT_G_Pin
-                           LED_YELLOW_Pin */
+                           DIGIT_E_Pin DIGIT_F_Pin LED_RED_Pin LED_YELLOW_Pin */
   GPIO_InitStruct.Pin = MEASURE_EN_Pin|DIGIT_3_Pin|DIGIT_2_Pin|DIGIT_1_Pin
                           |DIGIT_A_Pin|DIGIT_B_Pin|DIGIT_C_Pin|DIGIT_D_Pin
-                          |DIGIT_E_Pin|DIGIT_F_Pin|LED_RED_Pin|DIGIT_G_Pin
-                          |LED_YELLOW_Pin;
+                          |DIGIT_E_Pin|DIGIT_F_Pin|LED_RED_Pin|LED_YELLOW_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -315,7 +318,26 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+#ifndef DEBUG
+/**
+ * @brief Configure some gpios used on Release mode to avoid a conflict in debug mode
+ * 		  DIGIT_G is the same pin that SWDIO
+ */
+static void GPIO_ReleaseMode_Init(void) {
+	GPIO_InitTypeDef GPIO_InitStruct = {0};
 
+	/* Set GPIO G pin as output and reset as default */
+	HAL_GPIO_WritePin(DIGIT_G_GPIO_Port, DIGIT_G_Pin, GPIO_PIN_RESET);
+
+	GPIO_InitStruct.Pin = DIGIT_G_Pin;
+
+	GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+	GPIO_InitStruct.Pull = GPIO_NOPULL;
+	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_MEDIUM;
+
+	HAL_GPIO_Init(DIGIT_G_GPIO_Port, &GPIO_InitStruct);
+}
+#endif
 /* USER CODE END 4 */
 
 /**

@@ -113,8 +113,12 @@ static void _scoring_setDigitSegment(scoringDigitSeg_t segment, GPIO_PinState gp
 		GPIO_Pin = DIGIT_F_Pin;
 		break;
 	case DIGIT_G:
+#ifdef DEBUG
+		return;
+#else
 		GPIOx = DIGIT_G_GPIO_Port;
 		GPIO_Pin = DIGIT_G_Pin;
+#endif
 		break;
 	default:
 		assert_param(!"Wrong segment");
