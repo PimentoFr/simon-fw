@@ -19,13 +19,13 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #ifdef SIMON_TEST_HW
 #include "test.h"
 #endif
 #include "led.h"
+#include "engine.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -107,6 +107,8 @@ int main(void)
   test_initTestHW();
   test_computeTestHW();
 #endif
+
+  engine_init();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -114,7 +116,7 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-
+	  engine_compute();
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
