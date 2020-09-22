@@ -52,5 +52,5 @@ GPIO_PinState button_read(button_t button) {
 		return GPIO_PIN_RESET;
 	}
 
-	return HAL_GPIO_ReadPin(GPIOx, GPIO_Pin);
+	return HAL_GPIO_ReadPin(GPIOx, GPIO_Pin) ? GPIO_PIN_RESET : GPIO_PIN_SET;
 }

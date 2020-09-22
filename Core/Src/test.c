@@ -72,13 +72,13 @@ void test_computeTestHW(void) {
  */
 static void _test_computeButtonLed(void) {
 	/* BUTTON_RED */
-	led_setEnable(LED_RED, (button_read(BUTTON_RED) == GPIO_PIN_RESET) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+	led_setEnable(LED_RED, (button_read(BUTTON_RED) == GPIO_PIN_SET) ? GPIO_PIN_SET : GPIO_PIN_RESET);
 	/* BUTTON_GREEN */
-	led_setEnable(LED_GREEN, (button_read(BUTTON_GREEN) == GPIO_PIN_RESET) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+	led_setEnable(LED_GREEN, (button_read(BUTTON_GREEN) == GPIO_PIN_SET) ? GPIO_PIN_SET : GPIO_PIN_RESET);
 	/* BUTTON_YELLOW */
-	led_setEnable(LED_YELLOW, (button_read(BUTTON_YELLOW) == GPIO_PIN_RESET) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+	led_setEnable(LED_YELLOW, (button_read(BUTTON_YELLOW) == GPIO_PIN_SET) ? GPIO_PIN_SET : GPIO_PIN_RESET);
 	/* BUTTON_BLUE */
-	led_setEnable(LED_BLUE, (button_read(BUTTON_BLUE) == GPIO_PIN_RESET) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+	led_setEnable(LED_BLUE, (button_read(BUTTON_BLUE) == GPIO_PIN_SET) ? GPIO_PIN_SET : GPIO_PIN_RESET);
 }
 
 /**
@@ -148,13 +148,13 @@ static void _test_compute7SegCounter(void) {
  */
 static void _test_computeMenuButton(void) {
 
-	if(button_read(BUTTON_CONF_MENU) == GPIO_PIN_RESET) {
+	if(button_read(BUTTON_CONF_MENU) == GPIO_PIN_SET) {
 		_testHWSettings.counterValue = 0;
 	}
-	else if(button_read(BUTTON_CONF_DOWN) == GPIO_PIN_RESET) {
+	else if(button_read(BUTTON_CONF_DOWN) == GPIO_PIN_SET) {
 		_testHWSettings.counterValue = 333;
 	}
-	else if(button_read(BUTTON_CONF_UP) == GPIO_PIN_RESET) {
+	else if(button_read(BUTTON_CONF_UP) == GPIO_PIN_SET) {
 		_testHWSettings.counterValue = 666;
 	}
 }
