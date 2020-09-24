@@ -17,11 +17,12 @@
 #define AUTOPLAY_ITEM_SHOW_DURATION_MS	(300)	/* Time while note is played */
 #define AUTOPLAY_ITEM_DELAY_MS			(200)	/* Time between two notes */
 #define PLAY_ITEM_SHOW_DURATION_MS		(300)   /* Time while item will be shown */
+#define RING_COLOR_LED_PERIOD_MS		(100)
 typedef enum {
 	ITEM_RED = 0,
 	ITEM_GREEN,
-	ITEM_YELLOW,
 	ITEM_BLUE,
+	ITEM_YELLOW,
 	ITEM_EMPTY,
 	ITEM_MAX_SIZE
 } sequenceItem_t;
@@ -43,10 +44,17 @@ typedef struct {
 } playSettings_t;
 
 typedef struct {
+	ledColor_t currentLedColor;
+	uint32_t lastLedColorTimestamp;
+} engineRingColor_t;
+
+typedef struct {
 	levelSettings_t levelSettings;						/* Current level settings*/
 	autoplaySettings_t autoplaySettings;				/* Autoplay settings */
 	playSettings_t playSettings;						/* Play settings */
+	engineRingColor_t ringColorSettings;				/* Ring Color Settings */
 } engineSettings_t;
+
 
 static engineSettings_t _engineSettings = {0};
 static stateMachineHandler_t _engineSM = {0};
@@ -59,6 +67,7 @@ static stateMachineHandler_t _engineSM = {0};
 static status_t _engine_startUp(stateMachineHandler_t * handler);
 /* Game */
 static status_t _engine_gameEnter(stateMachineHandler_t * handler);
+static status_t _engine_startUpStartRingLed(stateMachineHandler_t * handler);
 static status_t _engine_gameGenerator(stateMachineHandler_t * handler);
 static status_t _engine_gameGeneratorAddItem(stateMachineHandler_t * handler);
 static status_t _engine_gameAutoplayInit(stateMachineHandler_t * handler);
@@ -104,9 +113,41 @@ static status_t _engine_startUp(stateMachineHandler_t * handler) {
 	_engineSettings.autoplaySettings.sequenceIndex = 0;
 	_engineSettings.levelSettings.level = 0;
 
-	return stateMachine_goTo(handler, _engine_gameEnter);
+	return stateMachine_goTo(handler, _engine_startUpStartRingLed);
 }
 
+static status_t _engine_startUpStartRingLed(stateMachineHandler_t * handler) {
+
+	if(misc_getElapsedTimeFromTick(_engineSettings.ringColorSettings.lastLedColorTimestamp) >= RING_COLOR_LED_PERIOD_MS) {
+		led_disable(_engineSettings.ringColorSettings.currentLedColor);
+		_engineSettings.ringColorSettings.currentLedColor++;
+		if(_engineSettings.ringColorSettings.currentLedColor >= LED_MAX_SIZE) {
+			_engineSettings.ringColorSettings.currentLedColor = LED_RED;
+		}
+
+		led_enable(_engineSettings.ringColorSettings.currentLedColor);
+
+		/* Refresh the timestamp */
+		_engineSettings.ringColorSettings.lastLedColorTimestamp = HAL_GetTick();
+	}
+
+	if(button_getCurrentState(BUTTON_RED) == BUTTON_LONG_PRESS_AND_RELEASED ||
+	   button_getCurrentState(BUTTON_GREEN) == BUTTON_LONG_PRESS_AND_RELEASED ||
+	   button_getCurrentState(BUTTON_YELLOW) == BUTTON_LONG_PRESS_AND_RELEASED ||
+	   button_getCurrentState(BUTTON_BLUE) == BUTTON_LONG_PRESS_AND_RELEASED ||
+	   button_getCurrentState(BUTTON_CONF_UP) == BUTTON_LONG_PRESS_AND_RELEASED ||
+	   button_getCurrentState(BUTTON_CONF_DOWN) == BUTTON_LONG_PRESS_AND_RELEASED ||
+	   button_getCurrentState(BUTTON_CONF_MENU) == BUTTON_LONG_PRESS_AND_RELEASED) {
+
+		led_disable(_engineSettings.ringColorSettings.currentLedColor);
+
+		pseudoRandomGenerator_init();
+
+		return stateMachine_goTo(handler, _engine_gameEnter);
+	}
+
+	return STATUS_OK;
+}
 /**
  * ==============================================
  * 		GAME EVALUATED CALLBACKS
