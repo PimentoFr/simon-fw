@@ -60,6 +60,8 @@ static status_t _engine_startUp(stateMachineHandler_t * handler);
 /* Game */
 static status_t _engine_gameEnter(stateMachineHandler_t * handler);
 static status_t _engine_gameGenerator(stateMachineHandler_t * handler);
+static status_t _engine_gameGeneratorAddItem(stateMachineHandler_t * handler);
+static status_t _engine_gameAutoplayInit(stateMachineHandler_t * handler);
 static status_t _engine_gameAutoplay(stateMachineHandler_t * handler);
 static status_t _engine_gameAutoplayWaitEndItem(stateMachineHandler_t * handler);
 static status_t _engine_gameAutoplayWaitNextItem(stateMachineHandler_t * handler);
@@ -130,6 +132,19 @@ static status_t _engine_gameGenerator(stateMachineHandler_t * handler) {
 		uint32_t randomValue = pseudoRandomGenerator_getValue();
 		_engineSettings.levelSettings.requestedSequence[sequenceIndex] = (sequenceItem_t) randomValue % 4;
 	}
+
+	return stateMachine_goTo(handler, _engine_gameAutoplayInit);
+}
+
+static status_t _engine_gameGeneratorAddItem(stateMachineHandler_t * handler) {
+	uint8_t sequenceIndex = _engineSettings.levelSettings.level - 1;
+	uint32_t randomValue = pseudoRandomGenerator_getValue();
+	_engineSettings.levelSettings.requestedSequence[sequenceIndex] = (sequenceItem_t) randomValue % 4;
+
+	return stateMachine_goTo(handler, _engine_gameAutoplayInit);
+}
+
+static status_t _engine_gameAutoplayInit(stateMachineHandler_t * handler) {
 
 	/* Re-initialize autoplaySettings structure */
 	_engineSettings.autoplaySettings.sequenceIndex = 0;
@@ -278,16 +293,13 @@ static status_t _engine_gamePlayCheckProposal(stateMachineHandler_t * handler) {
 
 static status_t _engine_gameLevelSuccess(stateMachineHandler_t * handler) {
 
-	led_disableAll();
-
-	for(uint8_t i = 0; i < 20; i++) {
-		led_enable(LED_GREEN);
-		HAL_Delay(100);
-		led_disable(LED_GREEN);
-		HAL_Delay(100);
+	if(_engineSettings.levelSettings.level != UINT8_MAX) {
+		_engineSettings.levelSettings.level ++;
 	}
 
-	return stateMachine_goTo(handler, _engine_gameEnter);
+	HAL_Delay(500);
+
+	return stateMachine_goTo(handler, _engine_gameGeneratorAddItem);
 }
 
 
