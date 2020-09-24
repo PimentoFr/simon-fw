@@ -15,12 +15,14 @@ typedef enum {
 	LED_RED = 0,
 	LED_GREEN,
 	LED_YELLOW,
-	LED_BLUE
+	LED_BLUE,
+	LED_MAX_SIZE
 } ledColor_t;
 
 
 void led_setEnable(ledColor_t ledColor, GPIO_PinState newState);
 #define led_enable(ledColor) led_setEnable(ledColor, GPIO_PIN_SET)
 #define led_disable(ledColor) led_setEnable(ledColor, GPIO_PIN_RESET)
+void led_disableAll(void);
 
 #endif /* INC_LED_H_ */

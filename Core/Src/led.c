@@ -67,3 +67,13 @@ void led_setEnable(ledColor_t ledColor, GPIO_PinState newState) {
 	HAL_GPIO_WritePin(GPIOx, GPIO_Pin, newState);
 	*currentState = newState;
 }
+
+/**
+ * @brief Disable all leds
+ */
+void led_disableAll(void) {
+	led_disable(LED_RED);
+	led_disable(LED_YELLOW);
+	led_disable(LED_GREEN);
+	led_disable(LED_BLUE);
+}
