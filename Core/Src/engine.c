@@ -10,27 +10,11 @@
 #include "button.h"
 #include "led.h"
 #include "pseudo_random_generator.h"
+#include "statemachine.h"
 
 #define REQUESTED_SEQUENCE_MAX_SIZE	(255)
 #define AUTOPLAY_ITEM_SHOW_DURATION_MS	(300)	/* Time while note is played */
 #define AUTOPLAY_ITEM_DELAY_MS			(200)	/* Time between two notes */
-
-typedef enum {
-	ENGINE_STARTUP = 0,
-	ENGINE_GAME,				/* Engine main state which will handle the game process */
-	ENGINE_MENU
-} engineMachineStates_t;
-
-typedef enum {
-	GAME_ENTER = 0,
-	GAME_GENERATOR, 			/* Generate the new level meaning create a new button sequence */
-	GAME_AUTOPLAY,				/* Simon will play this sequence to present it to player */
-	GAME_AUTOPLAY_WAIT_END_ITEM,			/* Wait until the item sequence is showing */
-	GAME_AUTOPLAY_WAIT_NEXT_ITEM,			/* Wait the next item sequence */
-	GAME_PLAY,					/* User will try to reproduce the requested sequence */
-	GAME_LEVEL_SUCCESS,			/* User reproduce will success the requested sequence */
-	GAME_LEVEL_FAILED			/* User fails to reproduce the requested sequence */
-} engineGameMachineStates_t;
 
 typedef struct {
 	uint8_t requestedSequence[REQUESTED_SEQUENCE_MAX_SIZE];		/* Requested sequence */
@@ -43,42 +27,43 @@ typedef struct {
 } autoplaySettings_t;
 
 typedef struct {
-	engineMachineStates_t currentState;
-	union {
-		engineGameMachineStates_t game;					/* Current sub state for the game process */
-	} currentSubState;
-
 	levelSettings_t levelSettings;						/* Current level settings*/
 	autoplaySettings_t autoplaySettings;				/* Autoplay settings */
 } engineSettings_t;
 
-
-
-
 static engineSettings_t _engineSettings = {0};
-
-static void _engine_stateMachine(void);
-static status_t _engine_goToState(engineMachineStates_t state);
+static stateMachineHandler_t _engineSM = {0};
 
 
-static void _engineGame_compute(void);
-static status_t _engineGame_goToState(engineGameMachineStates_t gameState);
-static status_t _engineGame_enter(void);
-static status_t _engineGame_generateLevel(void);
-static status_t _engineGame_autoplay(void);
-static status_t _engineGame_autoplayWaitNextItem(void);
-static status_t _engineGame_autoplayWaitEndItem(void);
+/* ================================
+ *  State machine evaluation callbacks
+ *  =============================== */
+/* Start up */
+static status_t _engine_startUp(stateMachineHandler_t * handler);
+/* Game */
+static status_t _engine_gameEnter(stateMachineHandler_t * handler);
+static status_t _engine_gameGenerator(stateMachineHandler_t * handler);
+static status_t _engine_gameAutoplay(stateMachineHandler_t * handler);
+static status_t _engine_gameAutoplayWaitEndItem(stateMachineHandler_t * handler);
+static status_t _engine_gameAutoplayWaitNextItem(stateMachineHandler_t * handler);
+static status_t _engine_gamePlay(stateMachineHandler_t * handler);
+static status_t _engine_gameLevelSuccess(stateMachineHandler_t * handler);
+static status_t _engine_gameLevelFailed(stateMachineHandler_t * handler);
+/* Menu */
+static status_t _engine_menuEnter(stateMachineHandler_t * handler);
 
-static void _engine_menuCompute(void);
 
+status_t engine_init(void) {
 
-void engine_init(void) {
-
-	_engineSettings.currentState = ENGINE_STARTUP;
 
 	button_init();
 
-	return;
+	if(stateMachine_init(&_engineSM, _engine_startUp ) != STATUS_OK) {
+		assert_param(!"Can not init stateMachine");
+		return STATUS_FAIL;
+	}
+
+	return STATUS_OK;
 }
 
 void engine_compute(void) {
@@ -87,124 +72,37 @@ void engine_compute(void) {
 		/* Compute button controller and update button events */
 		button_compute();
 		/* Compute the engine state machine */
-		_engine_stateMachine();
+		stateMachine_compute(&_engineSM);
 	}
 }
 
-static void _engine_stateMachine(void) {
-	switch(_engineSettings.currentState) {
-	case ENGINE_STARTUP:
-		_engine_goToState(ENGINE_GAME);
-		_engineGame_goToState(GAME_ENTER);
-		break;
-	case ENGINE_GAME:
-		_engineGame_compute();
-		break;
-	case ENGINE_MENU:
-		_engine_menuCompute();
-		break;
-	default:
-		assert_param(!"Bad state");
-		return;
+static status_t _engine_startUp(stateMachineHandler_t * handler) {
 
-	}
+	_engineSettings.autoplaySettings.sequenceIndex = 0;
+	_engineSettings.levelSettings.level = 0;
+
+	return stateMachine_goTo(handler, _engine_gameEnter);
 }
 
 /**
- * @brief Change the current state of the engine state machine
- * @param state New state of the engine state machine
-
- */
-static status_t _engine_goToState(engineMachineStates_t state) {
-	_engineSettings.currentState = state;
-	return STATUS_OK;
-}
-
-/**
- * ===============================================================
- * 				GAME CONTROLLER
- * ===============================================================
+ * ==============================================
+ * 		GAME EVALUATED CALLBACKS
+ * ==============================================
  */
 
-/**
- * @brief Change the substate of the game process
- */
-static status_t _engineGame_goToState(engineGameMachineStates_t gameState) {
-	if(_engineSettings.currentState != ENGINE_GAME) {
-		assert_param(!"Bad state");
-		return STATUS_FAIL;
-	}
-
-	_engineSettings.currentSubState.game = gameState;
-
-	return STATUS_OK;
-}
-
-static void _engineGame_compute(void) {
-	switch(_engineSettings.currentSubState.game) {
-	case GAME_ENTER:
-		if(_engineGame_enter() != STATUS_OK) {
-			assert_param(!"Bad value");
-			return;
-		}
-		break;
-	case GAME_GENERATOR:
-		if(_engineGame_generateLevel() != STATUS_OK) {
-			assert_param(!"Bad value");
-			return;
-		}
-		break;
-	case GAME_AUTOPLAY:
-		if(_engineGame_autoplay() != STATUS_OK) {
-			assert_param(!"Bad value");
-			return;
-		}
-		break;
-	case GAME_AUTOPLAY_WAIT_END_ITEM:
-		if(_engineGame_autoplayWaitEndItem() != STATUS_OK) {
-			assert_param(!"Bad value");
-			return;
-		}
-		break;
-	case GAME_AUTOPLAY_WAIT_NEXT_ITEM:
-		if(_engineGame_autoplayWaitNextItem() != STATUS_OK) {
-			assert_param(!"Bad value");
-			return;
-		}
-		break;
-	case GAME_PLAY:
-		HAL_Delay(5000);
-		if(_engineGame_goToState(GAME_ENTER) != STATUS_FAIL) {
-			assert_param(!"Bad value");
-			return;
-		}
-		break;
-	case GAME_LEVEL_SUCCESS:
-		break;
-	case GAME_LEVEL_FAILED:
-		break;
-	default:
-		break;
-	}
-
-
-	if(button_getCurrentState(BUTTON_CONF_MENU) == BUTTON_SHORT_PRESS_AND_RELEASED) {
-		_engine_goToState(ENGINE_MENU);
-	}
-}
-
-static status_t _engineGame_enter(void) {
+static status_t _engine_gameEnter(stateMachineHandler_t * handler) {
 
 	/* Set default level */
 	_engineSettings.levelSettings.level = 10;
 
-	if(_engineGame_goToState(GAME_GENERATOR) != STATUS_OK) {
+	if(stateMachine_goTo(handler, _engine_gameGenerator) != STATUS_OK) {
 		return STATUS_FAIL;
 	}
+
 	return STATUS_OK;
 }
 
-static status_t _engineGame_generateLevel(void) {
+static status_t _engine_gameGenerator(stateMachineHandler_t * handler) {
 
 	for(uint8_t sequenceIndex = 0; sequenceIndex < _engineSettings.levelSettings.level; sequenceIndex++) {
 		uint32_t randomValue = pseudoRandomGenerator_getValue();
@@ -215,14 +113,10 @@ static status_t _engineGame_generateLevel(void) {
 	_engineSettings.autoplaySettings.sequenceIndex = 0;
 	_engineSettings.autoplaySettings.lastPlaySequenceItemTimestamp = HAL_GetTick();
 
-	if(_engineGame_goToState(GAME_AUTOPLAY) != STATUS_OK) {
-		return STATUS_FAIL;
-	}
-
-	return STATUS_OK;
+	return stateMachine_goTo(handler, _engine_gameAutoplay);
 }
 
-static status_t _engineGame_autoplay(void) {
+static status_t _engine_gameAutoplay(stateMachineHandler_t * handler) {
 
 	uint8_t itemSequence = _engineSettings.levelSettings.requestedSequence[_engineSettings.autoplaySettings.sequenceIndex];
 
@@ -240,10 +134,10 @@ static status_t _engineGame_autoplay(void) {
 	/* Update the new timestamp */
 	_engineSettings.autoplaySettings.lastPlaySequenceItemTimestamp = HAL_GetTick();
 
-	return _engineGame_goToState(GAME_AUTOPLAY_WAIT_END_ITEM);
+	return stateMachine_goTo(handler, _engine_gameAutoplayWaitEndItem);
 }
 
-static status_t _engineGame_autoplayWaitEndItem(void) {
+static status_t _engine_gameAutoplayWaitEndItem(stateMachineHandler_t * handler) {
 
 	uint32_t timeElapsed = HAL_GetTick() - _engineSettings.autoplaySettings.lastPlaySequenceItemTimestamp;
 	if(timeElapsed >= AUTOPLAY_ITEM_SHOW_DURATION_MS ) {
@@ -257,15 +151,12 @@ static status_t _engineGame_autoplayWaitEndItem(void) {
 		led_disable((ledColor_t) itemSequence);
 
 		/* Wait the next item */
-		if(_engineGame_goToState(GAME_AUTOPLAY_WAIT_NEXT_ITEM) != STATUS_OK) {
-			return STATUS_FAIL;
-		}
+		return stateMachine_goTo(handler, _engine_gameAutoplayWaitNextItem);
 	}
-
 	return STATUS_OK;
 }
 
-static status_t _engineGame_autoplayWaitNextItem(void) {
+static status_t _engine_gameAutoplayWaitNextItem(stateMachineHandler_t * handler) {
 	uint32_t timeElapsed = HAL_GetTick() - _engineSettings.autoplaySettings.lastPlaySequenceItemTimestamp;
 	if(timeElapsed >= (AUTOPLAY_ITEM_SHOW_DURATION_MS + AUTOPLAY_ITEM_DELAY_MS)) {
 
@@ -274,20 +165,41 @@ static status_t _engineGame_autoplayWaitNextItem(void) {
 
 		/* If there is no more item to show */
 		if(_engineSettings.autoplaySettings.sequenceIndex >= _engineSettings.levelSettings.level ) {
-			if(_engineGame_goToState(GAME_PLAY) != STATUS_OK) {
-				return STATUS_FAIL;
-			}
+			return stateMachine_goTo(handler, _engine_gamePlay);
 		} else {
-			if(_engineGame_goToState(GAME_AUTOPLAY) != STATUS_OK) {
-				return STATUS_FAIL;
-			}
+			return stateMachine_goTo(handler, _engine_gameAutoplay);
 		}
 	}
+	return STATUS_OK;
+}
+
+static status_t _engine_gamePlay(stateMachineHandler_t * handler) {
+
+	HAL_Delay(5000);
+	return stateMachine_goTo(handler, _engine_gameEnter);
+}
+
+static status_t _engine_gameLevelSuccess(stateMachineHandler_t * handler) {
 
 	return STATUS_OK;
 }
 
-static void _engine_menuCompute(void) {
-	_engine_goToState(ENGINE_GAME);
+
+static status_t _engine_gameLevelFailed(stateMachineHandler_t * handler) {
+
+	return STATUS_OK;
 }
+
+
+/**
+ * ====================================================
+ *     MENU EVALUATED CALLBACKS
+ * ====================================================
+ */
+
+static status_t _engine_menuEnter(stateMachineHandler_t * handler) {
+
+	return stateMachine_goTo(handler, _engine_gameEnter);
+}
+
 

@@ -9,7 +9,7 @@
 #define INC_ENGINE_H_
 
 
-void engine_init(void);
+status_t engine_init(void);
 void engine_compute(void);
 
 #endif /* INC_ENGINE_H_ */
