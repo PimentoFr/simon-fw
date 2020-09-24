@@ -8,6 +8,7 @@
 #ifndef INC_PSEUDO_RANDOM_GENERATOR_H_
 #define INC_PSEUDO_RANDOM_GENERATOR_H_
 
-uint32_t pseudoRandomGenerator_getValue(void);
+status_t pseudoRandomGenerator_init(void);
+uint16_t pseudoRandomGenerator_getValue(void);
 
 #endif /* INC_PSEUDO_RANDOM_GENERATOR_H_ */

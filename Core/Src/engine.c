@@ -129,7 +129,7 @@ static status_t _engine_gameEnter(stateMachineHandler_t * handler) {
 static status_t _engine_gameGenerator(stateMachineHandler_t * handler) {
 
 	for(uint8_t sequenceIndex = 0; sequenceIndex < _engineSettings.levelSettings.level; sequenceIndex++) {
-		uint32_t randomValue = pseudoRandomGenerator_getValue();
+		uint16_t randomValue = pseudoRandomGenerator_getValue();
 		_engineSettings.levelSettings.requestedSequence[sequenceIndex] = (sequenceItem_t) randomValue % 4;
 	}
 
@@ -138,7 +138,7 @@ static status_t _engine_gameGenerator(stateMachineHandler_t * handler) {
 
 static status_t _engine_gameGeneratorAddItem(stateMachineHandler_t * handler) {
 	uint8_t sequenceIndex = _engineSettings.levelSettings.level - 1;
-	uint32_t randomValue = pseudoRandomGenerator_getValue();
+	uint16_t randomValue = pseudoRandomGenerator_getValue();
 	_engineSettings.levelSettings.requestedSequence[sequenceIndex] = (sequenceItem_t) randomValue % 4;
 
 	return stateMachine_goTo(handler, _engine_gameAutoplayInit);
